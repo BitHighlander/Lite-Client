@@ -44,17 +44,53 @@ const EIP155_MAINNET_CHAINS: any = {
     defaultGasLimit: 135120,
     namespace: 'eip155',
   },
+  'eip155:42161': {
+    chainId: 8453,
+    name: 'Arbitrum',
+    logo: '/chain-logos/arbitrum.png',
+    rgb: '4, 100, 214',
+    rpc: 'https://api.zan.top/node/v1/arb/one/public',
+    namespace: 'eip155',
+  },
+  'eip155:100': {
+    chainId: 100,
+    name: 'Gnosis',
+    logo: '/chain-logos/gnosis.png',
+    rgb: '33, 186, 69',
+    rpc: 'https://api.zan.top/node/v1/arb/one/public',
+    namespace: 'eip155',
+  },
+  'eip155:11155111': {
+    chainId: 100,
+    name: 'sepolia',
+    logo: '/chain-logos/sepolia.png',
+    rgb: '33, 186, 69',
+    rpc: 'https://rpc.notadegen.com/eth/sepolia',
+    namespace: 'eip155',
+  },
 };
 
-const useKeepKeySDK = async function () {
+const getProvider = async (chainId: any) => {
   try {
-    const inputChain = 'eip155:1';
+    console.log('chainId: ', chainId);
+    chainId = parseInt(chainId, 16);
+    console.log('chainId: ', chainId);
+    const inputChain = 'eip155:' + chainId;
     const providerUrl = EIP155_MAINNET_CHAINS[inputChain].rpc;
     console.log('providerUrl: ', providerUrl);
     const provider = new JsonRpcProvider(providerUrl);
     console.log('provider: ', provider);
+    return { provider };
+  } catch (e: any) {
+    console.log('error: ', e);
+    throw e;
+  }
+};
 
-    const keepkeyApiKey = '123';
+const useKeepKeySDK = async function () {
+  try {
+    const keepkeyApiKey = localStorage.getItem('keepkeyApiKey') || '123';
+    // const keepkeyApiKey = '123';
     const keepkeyConfig = {
       apiKey: keepkeyApiKey,
       pairingInfo: {
@@ -65,6 +101,8 @@ const useKeepKeySDK = async function () {
       },
     };
     const keepKeySdk = await KeepKeySdk.create(keepkeyConfig);
+    if (keepkeyConfig.apiKey !== keepkeyApiKey)
+      localStorage.setItem('keepkeyApiKey', keepkeyConfig.apiKey);
 
     const { address } = await keepKeySdk.address.ethereumGetAddress({
       address_n: [2147483692, 2147483708, 2147483648, 0, 0],
@@ -72,7 +110,7 @@ const useKeepKeySDK = async function () {
     console.log('address: ', address);
     const account = address;
 
-    return { provider, account, keepKeySdk };
+    return { account, keepKeySdk };
   } catch (e: any) {
     console.log('error: ', e);
     throw e;
@@ -86,7 +124,7 @@ const ChatView = (): JSX.Element => {
   const [currentQuestion, setCurrentQuestion] = useState<AIMessage>();
   const [isOllamaBeingPolled, setIsOllamaBeingPolled] = useState(false);
   // const { provider, account } = useSDK();
-  const [chainId, setChainId] = useState<any>('');
+  const [chainId, setChainId] = useState<any>('0x1');
   const [account, setAccount] = useState<any>('');
   const [provider, setProvider] = useState<any>({});
 
@@ -98,8 +136,9 @@ const ChatView = (): JSX.Element => {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       const responsePair = await useKeepKeySDK();
+      const responseProvider = await getProvider(chainId);
       console.log('responsePair: ', responsePair);
-      if (responsePair.provider) setProvider(responsePair.provider);
+      if (responseProvider.provider) setProvider(responseProvider.provider);
       if (responsePair.account) setAccount(responsePair.account);
     } catch (e) {
       console.error(e);
@@ -199,6 +238,7 @@ const ChatView = (): JSX.Element => {
         try {
           message = await handleBalanceRequest(provider, account);
         } catch (error) {
+          console.error(error);
           message = `Error: Failed to retrieve a valid balance from Metamask, try reconnecting.`;
         }
         updateDialogueEntries(question, message);
@@ -293,19 +333,24 @@ const ChatView = (): JSX.Element => {
     }
 
     try {
-      const response = await provider.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: selectedChain }],
-      });
-      console.log(response);
+      console.log('selectedChain: ', selectedChain);
+      setChainId(selectedChain);
+      const providerNew = await getProvider(selectedChain);
+      setProvider(providerNew);
+      // const response = await provider.request({
+      //   method: 'wallet_switchEthereumChain',
+      //   params: [{ chainId: selectedChain }],
+      // });
+      // console.log(response);
     } catch (error) {
       //if switch chain fails then add the chain
       try {
         const chainInfo = getChainInfoByChainId(selectedChain);
-        const response = await provider.request({
-          method: 'wallet_addEthereumChain',
-          params: [chainInfo],
-        });
+        console.log('chainInfo: ', chainInfo);
+        // const response = await provider.request({
+        //   method: 'wallet_addEthereumChain',
+        //   params: [chainInfo],
+        // });
       } catch (error) {
         console.error('Failed to switch networks:', error);
       }

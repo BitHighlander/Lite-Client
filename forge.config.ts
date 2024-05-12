@@ -103,7 +103,7 @@ const config: ForgeConfig = {
     new WebpackPlugin({
       mainConfig: process.env.NODE_ENV === 'development' ? mainDevConfig : mainConfig,
       devContentSecurityPolicy:
-        "connect-src 'self' unsafe-inline http://localhost:1646/auth/pair http://localhost:1646/addresses/eth ws://localhost:* https://metamask-sdk-socket.metafi.codefi.network wss://metamask-sdk-socket.metafi.codefi.network data:",
+        "connect-src 'self' unsafe-inline https://eth.llamarpc.com https://mainnet.base.org https://api.zan.top/node/v1/arb/one/public https://api.zan.top/node/v1/arb/one/public https://rpc.notadegen.com/eth/sepolia http://localhost:1646/auth/pair http://localhost:1646/addresses/eth ws://localhost:* https://metamask-sdk-socket.metafi.codefi.network wss://metamask-sdk-socket.metafi.codefi.network data:",
       renderer: {
         config: rendererConfig,
         entryPoints: [

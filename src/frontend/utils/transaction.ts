@@ -56,18 +56,22 @@ const formatWalletBalance = (balanceWeiHex: string) => {
 };
 
 export const handleBalanceRequest = async (
-  provider: SDKProvider | undefined,
+  provider: SDKProvider | any | undefined,
   account: string | undefined,
 ) => {
-  const blockNumber = await provider?.request({
-    method: 'eth_blockNumber',
-    params: [],
-  });
+  const blockNumber = await provider.getBlockNumber();
+  // const blockNumber = await provider?.request({
+  //   method: 'eth_blockNumber',
+  //   params: [],
+  // });
 
-  const balanceWeiHex = await provider?.request({
-    method: 'eth_getBalance',
-    params: [account, blockNumber],
-  });
+  let balanceWeiHex = await provider.getBalance(account, blockNumber);
+  // const balanceWeiHex = await provider?.request({
+  //   method: 'eth_getBalance',
+  //   params: [account, blockNumber],
+  // });
+  balanceWeiHex = balanceWeiHex.toString();
+  console.log('balanceWeiHex: ', balanceWeiHex);
 
   if (typeof balanceWeiHex === 'string') {
     return `${formatWalletBalance(balanceWeiHex)}`;
