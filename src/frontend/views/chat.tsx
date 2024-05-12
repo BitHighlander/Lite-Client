@@ -2,7 +2,10 @@
 import React, { FormEvent, useEffect, useState, useRef } from 'react';
 import Styled from 'styled-components';
 import { useSDK } from '@metamask/sdk-react';
+import { KeepKeySdk } from '@keepkey/keepkey-sdk';
 import { ThreeDots } from 'react-loader-spinner';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+import { JsonRpcProvider } from 'ethers';
 
 // types and helpers
 import { AIMessage } from '../types';
@@ -18,18 +21,95 @@ import { parseResponse } from '../utils/utils';
 import { ActionParams } from '../utils/types';
 import { getChainInfoByChainId } from '../utils/chain';
 
+const EIP155_MAINNET_CHAINS: any = {
+  'eip155:1': {
+    chainId: 1,
+    WETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+    name: 'Ethereum',
+    logo: '/chain-logos/eip155-1.png',
+    rgb: '99, 125, 234',
+    universalRouter: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
+    rpc: 'https://eth.llamarpc.com',
+    defaultGasLimit: 250000,
+    namespace: 'eip155',
+  },
+  'eip155:8453': {
+    chainId: 8453,
+    WETH: '0x4200000000000000000000000000000000000006',
+    name: 'Base',
+    logo: '/chain-logos/base.png',
+    rgb: '242, 242, 242',
+    universalRouter: '0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD',
+    rpc: 'https://mainnet.base.org',
+    defaultGasLimit: 135120,
+    namespace: 'eip155',
+  },
+};
+
+const useKeepKeySDK = async function () {
+  try {
+    const inputChain = 'eip155:1';
+    const providerUrl = EIP155_MAINNET_CHAINS[inputChain].rpc;
+    console.log('providerUrl: ', providerUrl);
+    const provider = new JsonRpcProvider(providerUrl);
+    console.log('provider: ', provider);
+
+    const keepkeyApiKey = '123';
+    const keepkeyConfig = {
+      apiKey: keepkeyApiKey,
+      pairingInfo: {
+        name: 'Morpheus',
+        imageUrl: 'https://pbs.twimg.com/profile_images/1750255744614547456/ru66nlfU_400x400.jpg',
+        basePath: 'http://localhost:1646/spec/swagger.json',
+        url: 'http://localhost:1646',
+      },
+    };
+    const keepKeySdk = await KeepKeySdk.create(keepkeyConfig);
+
+    const { address } = await keepKeySdk.address.ethereumGetAddress({
+      address_n: [2147483692, 2147483708, 2147483648, 0, 0],
+    });
+    console.log('address: ', address);
+    const account = address;
+
+    return { provider, account, keepKeySdk };
+  } catch (e: any) {
+    console.log('error: ', e);
+    throw e;
+  }
+};
+
 const ChatView = (): JSX.Element => {
   const [selectedModel, setSelectedModel] = useState('llama2');
   const [dialogueEntries, setDialogueEntries] = useAIMessagesContext();
   const [inputValue, setInputValue] = useState('');
   const [currentQuestion, setCurrentQuestion] = useState<AIMessage>();
   const [isOllamaBeingPolled, setIsOllamaBeingPolled] = useState(false);
-  const { ready, sdk, connected, connecting, provider, chainId, account, balance } = useSDK();
-  const ethInWei = '1000000000000000000';
-  const [selectedNetwork, setSelectedNetwork] = useState('');
+  // const { provider, account } = useSDK();
+  const [chainId, setChainId] = useState<any>('');
+  const [account, setAccount] = useState<any>('');
+  const [provider, setProvider] = useState<any>({});
 
   const chatMainRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
+
+  const onStart = async function () {
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const responsePair = await useKeepKeySDK();
+      console.log('responsePair: ', responsePair);
+      if (responsePair.provider) setProvider(responsePair.provider);
+      if (responsePair.account) setAccount(responsePair.account);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Scroll to bottom of chat when user adds new dialogue
+  useEffect(() => {
+    onStart();
+  }, []);
 
   useEffect(() => {
     window.backendBridge.ollama.onAnswer((response) => {

@@ -80,6 +80,8 @@
     "webpack-permissions-plugin": "^1.0.9"
   },
   "dependencies": {
+    "@electron-forge/shared-types": "^7.4.0",
+    "@keepkey/keepkey-sdk": "^0.2.57",
     "@metamask/sdk": "^0.14.2",
     "@metamask/sdk-react": "^0.14.2",
     "@metamask/sdk-react-ui": "^0.14.3",
@@ -87,7 +89,7 @@
     "check-disk-space": "^3.4.0",
     "electron-squirrel-startup": "^1.0.0",
     "electron-store": "^8.1.0",
-    "ethers": "^6.11.1",
+    "ethers": "^6.12.1",
     "ollama": "^0.4.3",
     "qrcode": "^1.5.3",
     "react-loader-spinner": "^6.1.6",
