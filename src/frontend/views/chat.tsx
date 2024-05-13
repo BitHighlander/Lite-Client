@@ -2,7 +2,10 @@
 import React, { FormEvent, useEffect, useState, useRef } from 'react';
 import Styled from 'styled-components';
 import { useSDK } from '@metamask/sdk-react';
+import { KeepKeySdk } from '@keepkey/keepkey-sdk';
 import { ThreeDots } from 'react-loader-spinner';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+import { JsonRpcProvider } from 'ethers';
 
 // types and helpers
 import { AIMessage } from '../types';
@@ -18,18 +21,134 @@ import { parseResponse } from '../utils/utils';
 import { ActionParams } from '../utils/types';
 import { getChainInfoByChainId } from '../utils/chain';
 
+const EIP155_MAINNET_CHAINS: any = {
+  'eip155:1': {
+    chainId: 1,
+    WETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+    name: 'Ethereum',
+    logo: '/chain-logos/eip155-1.png',
+    rgb: '99, 125, 234',
+    universalRouter: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
+    rpc: 'https://eth.llamarpc.com',
+    defaultGasLimit: 250000,
+    namespace: 'eip155',
+  },
+  'eip155:8453': {
+    chainId: 8453,
+    WETH: '0x4200000000000000000000000000000000000006',
+    name: 'Base',
+    logo: '/chain-logos/base.png',
+    rgb: '242, 242, 242',
+    universalRouter: '0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD',
+    rpc: 'https://mainnet.base.org',
+    defaultGasLimit: 135120,
+    namespace: 'eip155',
+  },
+  'eip155:42161': {
+    chainId: 8453,
+    name: 'Arbitrum',
+    logo: '/chain-logos/arbitrum.png',
+    rgb: '4, 100, 214',
+    rpc: 'https://api.zan.top/node/v1/arb/one/public',
+    namespace: 'eip155',
+  },
+  'eip155:100': {
+    chainId: 100,
+    name: 'Gnosis',
+    logo: '/chain-logos/gnosis.png',
+    rgb: '33, 186, 69',
+    rpc: 'https://api.zan.top/node/v1/arb/one/public',
+    namespace: 'eip155',
+  },
+  'eip155:11155111': {
+    chainId: 100,
+    name: 'sepolia',
+    logo: '/chain-logos/sepolia.png',
+    rgb: '33, 186, 69',
+    rpc: 'https://rpc.notadegen.com/eth/sepolia',
+    namespace: 'eip155',
+  },
+};
+
+const getProvider = async (chainId: any) => {
+  try {
+    console.log('chainId: ', chainId);
+    chainId = parseInt(chainId, 16);
+    console.log('chainId: ', chainId);
+    const inputChain = 'eip155:' + chainId;
+    const providerUrl = EIP155_MAINNET_CHAINS[inputChain].rpc;
+    console.log('providerUrl: ', providerUrl);
+    const provider = new JsonRpcProvider(providerUrl);
+    console.log('provider: ', provider);
+    return { provider };
+  } catch (e: any) {
+    console.log('error: ', e);
+    throw e;
+  }
+};
+
+const useKeepKeySDK = async function () {
+  try {
+    const keepkeyApiKey = localStorage.getItem('keepkeyApiKey') || '123';
+    // const keepkeyApiKey = '123';
+    const keepkeyConfig = {
+      apiKey: keepkeyApiKey,
+      pairingInfo: {
+        name: 'Morpheus',
+        imageUrl: 'https://pbs.twimg.com/profile_images/1750255744614547456/ru66nlfU_400x400.jpg',
+        basePath: 'http://localhost:1646/spec/swagger.json',
+        url: 'http://localhost:1646',
+      },
+    };
+    const keepKeySdk = await KeepKeySdk.create(keepkeyConfig);
+    if (keepkeyConfig.apiKey !== keepkeyApiKey)
+      localStorage.setItem('keepkeyApiKey', keepkeyConfig.apiKey);
+
+    const { address } = await keepKeySdk.address.ethereumGetAddress({
+      address_n: [2147483692, 2147483708, 2147483648, 0, 0],
+    });
+    console.log('address: ', address);
+    const account = address;
+
+    return { account, keepKeySdk };
+  } catch (e: any) {
+    console.log('error: ', e);
+    throw e;
+  }
+};
+
 const ChatView = (): JSX.Element => {
   const [selectedModel, setSelectedModel] = useState('llama2');
   const [dialogueEntries, setDialogueEntries] = useAIMessagesContext();
   const [inputValue, setInputValue] = useState('');
   const [currentQuestion, setCurrentQuestion] = useState<AIMessage>();
   const [isOllamaBeingPolled, setIsOllamaBeingPolled] = useState(false);
-  const { ready, sdk, connected, connecting, provider, chainId, account, balance } = useSDK();
-  const ethInWei = '1000000000000000000';
-  const [selectedNetwork, setSelectedNetwork] = useState('');
+  // const { provider, account } = useSDK();
+  const [chainId, setChainId] = useState<any>('0x1');
+  const [account, setAccount] = useState<any>('');
+  const [provider, setProvider] = useState<any>({});
 
   const chatMainRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
+
+  const onStart = async function () {
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const responsePair = await useKeepKeySDK();
+      const responseProvider = await getProvider(chainId);
+      console.log('responsePair: ', responsePair);
+      if (responseProvider.provider) setProvider(responseProvider.provider);
+      if (responsePair.account) setAccount(responsePair.account);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Scroll to bottom of chat when user adds new dialogue
+  useEffect(() => {
+    onStart();
+  }, []);
 
   useEffect(() => {
     window.backendBridge.ollama.onAnswer((response) => {
@@ -119,6 +238,7 @@ const ChatView = (): JSX.Element => {
         try {
           message = await handleBalanceRequest(provider, account);
         } catch (error) {
+          console.error(error);
           message = `Error: Failed to retrieve a valid balance from Metamask, try reconnecting.`;
         }
         updateDialogueEntries(question, message);
@@ -216,19 +336,24 @@ const ChatView = (): JSX.Element => {
     }
 
     try {
-      const response = await provider.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: selectedChain }],
-      });
-      console.log(response);
+      console.log('selectedChain: ', selectedChain);
+      setChainId(selectedChain);
+      const providerNew = await getProvider(selectedChain);
+      setProvider(providerNew);
+      // const response = await provider.request({
+      //   method: 'wallet_switchEthereumChain',
+      //   params: [{ chainId: selectedChain }],
+      // });
+      // console.log(response);
     } catch (error) {
       //if switch chain fails then add the chain
       try {
         const chainInfo = getChainInfoByChainId(selectedChain);
-        const response = await provider.request({
-          method: 'wallet_addEthereumChain',
-          params: [chainInfo],
-        });
+        console.log('chainInfo: ', chainInfo);
+        // const response = await provider.request({
+        //   method: 'wallet_addEthereumChain',
+        //   params: [chainInfo],
+        // });
       } catch (error) {
         console.error('Failed to switch networks:', error);
       }
@@ -237,7 +362,6 @@ const ChatView = (): JSX.Element => {
 
   return (
     <Chat.Layout>
-
       {connected && (
         <Chat.Dropdown onChange={handleNetworkChange} value={selectedNetwork}>
           <option value="">Select a network</option>
