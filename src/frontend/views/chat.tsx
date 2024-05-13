@@ -127,7 +127,7 @@ const ChatView = (): JSX.Element => {
   const [chainId, setChainId] = useState<any>('0x1');
   const [account, setAccount] = useState<any>('');
   const [provider, setProvider] = useState<any>({});
-
+  const [connected, setConnected] = useState(false);
   const chatMainRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
 
@@ -139,7 +139,10 @@ const ChatView = (): JSX.Element => {
       const responseProvider = await getProvider(chainId);
       console.log('responsePair: ', responsePair);
       if (responseProvider.provider) setProvider(responseProvider.provider);
-      if (responsePair.account) setAccount(responsePair.account);
+      if (responsePair.account) {
+        setConnected(true);
+        setAccount(responsePair.account);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -319,8 +322,8 @@ const ChatView = (): JSX.Element => {
   const handleNetworkChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedChain = e.target.value;
 
-    const selectedValue = e.target.value;
-    setSelectedNetwork(selectedValue);
+    // const selectedValue = e.target.value;
+    // setSelectedNetwork(selectedValue);
 
     // Check if the default option is selected
     if (!selectedChain) {
@@ -363,7 +366,7 @@ const ChatView = (): JSX.Element => {
   return (
     <Chat.Layout>
       {connected && (
-        <Chat.Dropdown onChange={handleNetworkChange} value={selectedNetwork}>
+        <Chat.Dropdown onChange={handleNetworkChange} value={chainId}>
           <option value="">Select a network</option>
           <option value="0x1">Ethereum</option>
           <option value="0xaa36a7">Sepolia</option>
