@@ -123,9 +123,12 @@ const ChatView = (): JSX.Element => {
   const [inputValue, setInputValue] = useState('');
   const [currentQuestion, setCurrentQuestion] = useState<AIMessage>();
   const [isOllamaBeingPolled, setIsOllamaBeingPolled] = useState(false);
-  const { ready, sdk, connected, connecting, provider, chainId, account, balance } = useSDK();
-  const ethInWei = '1000000000000000000';
-  const [selectedNetwork, setSelectedNetwork] = useState(chainId);
+  // const { provider, account } = useSDK();
+  const [chainId, setChainId] = useState<any>('0x1');
+  //setSelectedNetwork
+  const [selectedNetwork, setSelectedNetwork] = useState<any>('eip155:1');
+  const [account, setAccount] = useState<any>('');
+  const [provider, setProvider] = useState<any>({});
 
   const chatMainRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
@@ -215,6 +218,7 @@ const ChatView = (): JSX.Element => {
     const gasCostInWei = BigInt(transaction.gasPrice) * BigInt(transaction.gas);
     return gasCostInWei > fivePercentOfBalanceInWei;
   };
+
   const processResponse = async (
     question: string,
     response: string,

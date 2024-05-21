@@ -4,6 +4,7 @@ import { execFile, ChildProcess } from 'child_process';
 import fs from 'fs';
 import { sendOllamaStatusToRenderer } from '..';
 import { MOR_PROMPT } from './prompts';
+import { askExperts } from './experts'; // Import the experts
 
 // events
 import { IpcMainChannel } from '../../events';
@@ -142,20 +143,27 @@ export const getOllamaExecutableAndAppDataPath = (
   };
 };
 
+/*
+    Mixture of experts
+    Goals:
+    * Break down large and complex prompts into smaller, more manageable prompts
+
+    Prompts are broken into experts, each expert is responsible for a topics
+
+    Experts:
+    * Metamask
+    * KeepKey
+    * do
+    * morpheus (legacy untouched)
+
+    //@TODO break metamask logic away from Morpheus expert
+
+*/
+
 export const askOllama = async (model: string, message: string) => {
-  return await ollama.chat({
-    model,
-    messages: [
-      {
-        role: 'system',
-        content: MOR_PROMPT,
-      },
-      {
-        role: 'user',
-        content: `Answer the following query in a valid formatted JSON object without comments with both the response and action fields deduced from the user's question. Adhere strictly to JSON syntax without comments. Query: ${message}. Response: { "response":`,
-      },
-    ],
-  });
+  console.log('model', model);
+  console.log('message', message);
+  return askExperts(ollama, message);
 };
 
 export const getOrPullModel = async (model: string) => {
