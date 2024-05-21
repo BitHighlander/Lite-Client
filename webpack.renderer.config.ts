@@ -1,5 +1,5 @@
 import type { Configuration } from 'webpack';
-
+import webpack from 'webpack';
 import { rules } from './webpack.rules';
 import { plugins } from './webpack.plugins';
 
@@ -28,9 +28,21 @@ export const rendererConfig: Configuration = {
   module: {
     rules,
   },
-  plugins,
+  plugins: [
+    ...plugins,
+    new webpack.ProvidePlugin({
+      process: 'process/browser',
+      Buffer: ['buffer', 'Buffer'],
+    }),
+  ],
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.css'],
+    fallback: {
+      fs: false, // No direct usage of fs in renderer process
+      path: require.resolve('path-browserify'),
+      stream: require.resolve('stream-browserify'),
+    },
   },
   devtool: 'source-map',
+  target: 'electron-renderer', // Ensure we are targeting the electron-renderer environment
 };

@@ -37,6 +37,8 @@ const createWindow = async (): Promise<void> => {
     movable: true,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+      nodeIntegration: true,
+      contextIsolation: false,
     },
   });
 
